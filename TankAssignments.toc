@@ -1,8 +1,8 @@
 ## Interface: 11200
 ## Title: Tank Assignments
-## Author: |cff0000FFRaikko
+## Author: |cff0000FFAtreyyo
 ## Version: 2.0
-## Notes: Assigning Tanks - by |cff0000FFRaikko 
+## Notes: Assigning Tanks - by |cffFFF569Atreyyo
 ## DefaultState: Enabled
 ## LoadOnDemand: 0
 ## SavedVariablesPerCharacter: TankAssignments_Settings
