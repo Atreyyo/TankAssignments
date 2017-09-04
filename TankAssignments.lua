@@ -180,6 +180,7 @@ function TankAssignments:ConfigMainFrame()
 					TankAssignments:SetWidth(TankAssignments.Settings["MainFrameX"])
 					TankAssignments:SetHeight(TankAssignments.Settings["MainFrameY"])
 					TankAssignments.bg:Show()
+					TankAssignments:UpdateTanks()
 				else
 					if TankAssignments.Settings["SizeX"] < TankAssignments.Settings["MainFrameX"] then
 						TankAssignments.Settings["SizeX"] = TankAssignments.Settings["SizeX"]+(TankAssignments.Settings["MainFrameX"]/updfreq)
