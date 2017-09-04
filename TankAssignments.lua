@@ -91,6 +91,9 @@ TankAssignments.ChanTable = {
 -- events
 TankAssignments:RegisterEvent("ADDON_LOADED")
 TankAssignments:RegisterEvent("RAID_ROSTER_UPDATE")
+TankAssignments:RegisterEvent("CHAT_MSG_WHISPER")
+TankAssignments:RegisterEvent("UNIT_PORTRAIT_UPDATE")
+TankAssignments:RegisterEvent("CHAT_MSG_ADDON") 
 
 function TankAssignments:OnEvent()
 	if event == "ADDON_LOADED" and arg1 == "TankAssignments" then
@@ -99,10 +102,38 @@ function TankAssignments:OnEvent()
 		TankAssignments:UnregisterEvent("ADDON_LOADED")
 	elseif event == "RAID_ROSTER_UPDATE" then 
 		TankAssignments:UpdateTanks()
+	elseif event ==	"UNIT_PORTRAIT_UPDATE" then
+		TankAssignments:UpdateTanks()
+	elseif (event == "CHAT_MSG_ADDON") then
+		if string.sub(arg1,1,15) == "TankAssignments" and UnitName("player") ~= arg4 then
+			if string.sub(arg1,16,string.len(arg1)) == "Marks" then
+
+				TankAssignments.Marks = {
+					[1] = {},
+					[2] = {},
+					[3] = {},
+					[4] = {},
+					[5] = {},
+					[6] = {},
+					[7] = {},
+					[8] = {},
+				}
+
+				for text in string.gfind(arg2,"%d%a+") do	
+					local mark = tonumber(string.sub(text,1,1))
+					--DEFAULT_CHAT_FRAME:AddMessage(mark..string.sub(text,2,string.len(text)))
+					table.insert(TankAssignments.Marks[mark],string.sub(text,2,string.len(text)))
+				end
+			TankAssignments:UpdateTanks()
+			elseif string.sub(arg1,7,string.len(arg1)) == "Ignore" then
+
+			end
+		end
 	end	
 end
 
 -- /script TankAssignments:ConfigMainFrame()
+
 function TankAssignments:ConfigMainFrame()
 
 	TankAssignments.Drag = {}
@@ -141,6 +172,7 @@ function TankAssignments:ConfigMainFrame()
 	self:SetBackdropColor(0,0,0,1)
 
 	self:SetScript("OnUpdate", function()
+		local updfreq=(math.floor(GetFramerate())*0.3)
 		if TankAssignments:IsVisible() then
 			if not TankAssignments.Settings["MainFrame"] then
 				if TankAssignments.Settings["SizeX"] >= TankAssignments.Settings["MainFrameX"] and TankAssignments.Settings["SizeY"] >= TankAssignments.Settings["MainFrameY"] then
@@ -150,11 +182,11 @@ function TankAssignments:ConfigMainFrame()
 					TankAssignments.bg:Show()
 				else
 					if TankAssignments.Settings["SizeX"] < TankAssignments.Settings["MainFrameX"] then
-						TankAssignments.Settings["SizeX"] = TankAssignments.Settings["SizeX"]+(TankAssignments.Settings["MainFrameX"]/50)
+						TankAssignments.Settings["SizeX"] = TankAssignments.Settings["SizeX"]+(TankAssignments.Settings["MainFrameX"]/updfreq)
 						TankAssignments:SetWidth(TankAssignments.Settings["SizeX"])
 					end
 					if TankAssignments.Settings["SizeY"] < TankAssignments.Settings["MainFrameY"] then
-						TankAssignments.Settings["SizeY"] = TankAssignments.Settings["SizeY"]+(TankAssignments.Settings["MainFrameY"]/50)
+						TankAssignments.Settings["SizeY"] = TankAssignments.Settings["SizeY"]+(TankAssignments.Settings["MainFrameY"]/updfreq)
 						TankAssignments:SetHeight(TankAssignments.Settings["SizeY"])
 					end
 				end
@@ -168,11 +200,11 @@ function TankAssignments:ConfigMainFrame()
 						TankAssignments:Hide()
 					else
 						if TankAssignments.Settings["SizeY"] >= 0 then
-							TankAssignments.Settings["SizeY"] = TankAssignments.Settings["SizeY"]-(TankAssignments.Settings["MainFrameY"]/50)
+							TankAssignments.Settings["SizeY"] = TankAssignments.Settings["SizeY"]-(TankAssignments.Settings["MainFrameY"]/updfreq)
 							TankAssignments:SetHeight(TankAssignments.Settings["SizeY"])
 						end
 						if TankAssignments.Settings["SizeY"] < TankAssignments.Settings["MainFrameY"]/4 then
-							TankAssignments.Settings["SizeX"] = TankAssignments.Settings["SizeX"]-(TankAssignments.Settings["MainFrameX"]/50)
+							TankAssignments.Settings["SizeX"] = TankAssignments.Settings["SizeX"]-(TankAssignments.Settings["MainFrameX"]/updfreq)
 							TankAssignments:SetWidth(TankAssignments.Settings["SizeX"])
 						end	
 					end
@@ -358,7 +390,12 @@ function TankAssignments:ConfigMainFrame()
 	self.dbutton:SetWidth(145)
 	self.dbutton:SetHeight(18)
 	self.dbutton:SetText("Post TankAssignments")
-	self.dbutton:SetScript("OnClick", function() PlaySound("igMainMenuOptionCheckBoxOn"); TankAssignments:PostAssignments() end)
+	self.dbutton:SetScript("OnClick", function() 
+		if IsRaidOfficer("player") then
+			PlaySound("igMainMenuOptionCheckBoxOn"); 
+			TankAssignments:PostAssignments() 
+		end
+	end)
 	
 	self.bg:Hide()
 	self:Hide()
@@ -367,6 +404,8 @@ function TankAssignments:ConfigMainFrame()
 	TankAssignments.Settings["SizeY"] = 0	
 	TankAssignments.Minimap:CreateMinimapIcon()	
 end
+
+-- minimap creation
 
 function TankAssignments.Minimap:CreateMinimapIcon()
 	local Moving = false
@@ -699,7 +738,12 @@ function TankAssignments:UpdateTanks()
 	if GetRaidRosterInfo(1) then
 		for i=1,8 do
 			local index=0
+			for k,v in pairs(TankAssignments.Frames[i]) do
+				local frame = v
+				frame:Hide()
+			end
 			for k,v in pairs(TankAssignments.Marks[i]) do
+				TankAssignments.Frames[i][v] = TankAssignments.Frames[i][v] or TankAssignments:AddTankFrame(v,i)
 				local frame = TankAssignments.Frames[i][v]	
 				local unit = TankAssignments:GetRaidID(v)
 				if not TankAssignments:IsInRaid(v) or (not UnitExists(unit) and not UnitIsConnected(unit)) then	
@@ -707,20 +751,26 @@ function TankAssignments:UpdateTanks()
 					table.remove(TankAssignments.Marks[i],k)
 					table.sort(TankAssignments.Marks[i])	
 				end
+				--DEFAULT_CHAT_FRAME:AddMessage("Hiding frame for "..v)
+				frame:Hide()
 			end
 			for k,v in pairs(TankAssignments.Marks[i]) do
-				local frame = TankAssignments.Frames[i][v]	
-				local unit = TankAssignments:GetRaidID(v)				
+				TankAssignments.Frames[i][v] = TankAssignments.Frames[i][v] or TankAssignments:AddTankFrame(v,i)
+				local frame = TankAssignments.Frames[i][v] 
+				local unit = TankAssignments:GetRaidID(v)
+				--frame.unit=unit
 				index=index+1
 				frame:SetPoint("RIGHT", 10+(105*index),0)
 				frame.hp:SetText(UnitHealthMax(unit).." hp")
-				if not UnitIsVisible(unit) then
+				frame.texture:SetVertexColor(TankAssignments:GetClassColors(v,"rgb"))
+				if (not UnitExists(unit) or not UnitIsConnected(unit) or not UnitIsVisible(unit)) then
 					frame.model:SetModel("Interface\\Buttons\\talktomequestionmark.mdx")
 					frame.model:SetModelScale(4.25)
 					frame.model:SetPosition(0, 0, -1)
 				else
 					frame.model:SetUnit(unit)
 					frame.model:SetCamera(0)
+					--DEFAULT_CHAT_FRAME:AddMessage("Setting Model")
 				end
 				frame:Show()
 			end
@@ -733,6 +783,23 @@ function TankAssignments:UpdateTanks()
 				end
 			end
 			TankAssignments.Marks[i] = {}
+		end
+	end
+end
+
+function TankAssignments:SendTanks()
+	if IsRaidOfficer("player") then
+		--LoaMod:print("Sending ignore list")
+		local sendstring = ""
+		local n=0
+		for mark in pairs(TankAssignments.Marks) do		
+			for k,v in pairs(TankAssignments.Marks[mark]) do
+				sendstring=sendstring..mark..v
+			end
+		end
+		if sendstring ~= "" then
+			SendAddonMessage("TankAssignmentsMarks",sendstring,"RAID")
+			--DEFAULT_CHAT_FRAME:AddMessage(sendstring)
 		end
 	end
 end
@@ -838,7 +905,9 @@ function TankAssignments:AddFrame(name)
 	}
 	--frame:SetFrameLevel(3)
 	frame.model = CreateFrame("PlayerModel",nil,frame)
-	frame.model:SetScript("OnShow",function() if UnitIsVisible(unit) then this:SetCamera(0) end end)
+	frame.model:SetScript("OnShow",function() 
+	if UnitIsVisible(unit) then this:SetCamera(0) end 
+	end)
 	frame.model:SetWidth(25)
 	frame.model:SetHeight(25)
 	frame.model:SetPoint("TOPLEFT",frame,"TOPLEFT", 2, 0)
@@ -852,20 +921,20 @@ function TankAssignments:AddFrame(name)
 	
 	frame.hpbar = CreateFrame('Button', nil, frame)
 	frame.hpbar:SetWidth(frame:GetWidth()-27)
-	frame.hpbar:SetHeight(25)
-	frame.hpbar:SetPoint('TOPLEFT', 28,-2)
+	frame.hpbar:SetHeight(24)
+	frame.hpbar:SetPoint('TOPLEFT', 28,-1)
 	frame.hpbar:SetFrameLevel(1)
 	
 	frame.texture = frame.hpbar:CreateTexture(nil, 'ARTWORK')
 	frame.texture:SetWidth(frame:GetWidth()-27)
-	frame.texture:SetHeight(25)
+	frame.texture:SetHeight(24)
 	frame.texture:SetPoint('TOPLEFT', 0,0)
-	frame.texture:SetTexture("Interface/TargetingFrame/UI-StatusBar")
+	frame.texture:SetTexture("Interface\\AddOns\\TankAssignments\\LiteStep")
 	frame.texture:SetGradientAlpha("Vertical", 1,1,1, 0, 1, 1, 1, 1)
 
 	frame.highlight = frame.hpbar:CreateTexture(nil, 'ARTWORK')
 	frame.highlight:SetWidth(frame:GetWidth()-27)
-	frame.highlight:SetHeight(25)
+	frame.highlight:SetHeight(24)
 	frame.highlight:SetPoint('TOPLEFT', 0,0)
 	frame.highlight:SetTexture("Interface/Tooltips/UI-Tooltip-Background")
 	frame.highlight:SetVertexColor(0.5,0.5,0.5,1)
@@ -891,10 +960,12 @@ function TankAssignments:AddFrame(name)
 	end)
 
 	frame:SetScript("OnClick", function()
-		--DEFAULT_CHAT_FRAME:AddMessage(this:GetName().." Click!")
-		this:Hide()
-		TankAssignments:AddTank(this:GetName(), TankAssignments.Settings["active"])
-		TankAssignments:OpenToolTip(TankAssignments.Settings["active"])
+		if IsRaidOfficer("player") then
+			this:Hide()
+			TankAssignments:AddTank(this:GetName(), TankAssignments.Settings["active"])
+			TankAssignments:OpenToolTip(TankAssignments.Settings["active"])
+			TankAssignments:SendTanks()
+		end
 	end)
 	frame.unit = unit
 	frame:SetScript("OnEnter", UnitFrame_OnEnter)
@@ -921,7 +992,9 @@ function TankAssignments:AddTankFrame(name, mark)
 	}
 	frame:SetParent(mark)
 	frame.model = CreateFrame("PlayerModel",nil,frame)
-	--frame.model:SetScript("OnShow",function() this:SetCamera(0) end)
+	frame.model:SetScript("OnShow",function() 
+	if UnitIsVisible(unit) then this:SetCamera(0) end 
+	end)
 	frame.model:SetWidth(25)
 	frame.model:SetHeight(25)
 	frame.model:SetPoint("TOPLEFT",frame,"TOPLEFT", 2, 0)
@@ -935,15 +1008,15 @@ function TankAssignments:AddTankFrame(name, mark)
 	
 	frame.hpbar = CreateFrame('Button', nil, frame)
 	frame.hpbar:SetWidth(frame:GetWidth()-27)
-	frame.hpbar:SetHeight(25)
-	frame.hpbar:SetPoint('TOPLEFT', 28,-2)
+	frame.hpbar:SetHeight(24)
+	frame.hpbar:SetPoint('TOPLEFT', 28,-1)
 	frame.hpbar:SetFrameLevel(1)
 	
 	frame.texture = frame.hpbar:CreateTexture(nil, 'ARTWORK')
 	frame.texture:SetWidth(frame:GetWidth()-27)
-	frame.texture:SetHeight(25)
+	frame.texture:SetHeight(24)
 	frame.texture:SetPoint('TOPLEFT', 0,0)
-	frame.texture:SetTexture("Interface/TargetingFrame/UI-StatusBar")
+	frame.texture:SetTexture("Interface\\AddOns\\TankAssignments\\LiteStep")
 	
 	frame.texture:SetGradientAlpha("Vertical", 1,1,1, 0, 1, 1, 1, 1)
 	
@@ -962,13 +1035,16 @@ function TankAssignments:AddTankFrame(name, mark)
 	frame.hp:SetText(UnitHealthMax(unit).." hp")
 
 	frame:SetScript("OnClick", function()
-		for k, v in pairs(TankAssignments.Marks[mark]) do
-			if v == name then
-				--DEFAULT_CHAT_FRAME:AddMessage("Removing "..v.." from "..mark)
-				tremove(TankAssignments.Marks[mark],k)
-				table.sort(TankAssignments.Marks[mark])
-				this:Hide()
-				TankAssignments:UpdateTanks()
+		if IsRaidOfficer("player") then
+			for k, v in pairs(TankAssignments.Marks[mark]) do
+				if v == name then
+					--DEFAULT_CHAT_FRAME:AddMessage("Removing "..v.." from "..mark)
+					tremove(TankAssignments.Marks[mark],k)
+					table.sort(TankAssignments.Marks[mark])
+					this:Hide()
+					TankAssignments:SendTanks()
+					TankAssignments:UpdateTanks()
+				end
 			end
 		end
 		--DEFAULT_CHAT_FRAME:AddMessage(mark..name)
@@ -1027,7 +1103,15 @@ end
 TankAssignments:SetScript("OnEvent", TankAssignments.OnEvent)
 
 
+function TankAssignments:Debug()
 
+	for k,v in pairs(TankAssignments.Marks) do
+	
+		for i, name in pairs(TankAssignments.Marks[k]) do
+			DEFAULT_CHAT_FRAME:AddMessage(k..": "..i.." - "..name)
+		end
+	end
+end
 
 
 
