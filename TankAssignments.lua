@@ -99,6 +99,8 @@ TankAssignments:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
 function TankAssignments:OnEvent()
 	if event == "ADDON_LOADED" and arg1 == "TankAssignments" then
 		DEFAULT_CHAT_FRAME:AddMessage("|cffC79C6E TankAssignments 2.0|r: TankAssignments 2.0 Loaded!")
+		DEFAULT_CHAT_FRAME:AddMessage("|cffC79C6E TankAssignments 2.0|r: /ta - open/close TankAssignments")
+		DEFAULT_CHAT_FRAME:AddMessage("|cffC79C6E TankAssignments 2.0|r: /ta colors - turn chatcolors on/off")
 		if TankAssignments_Settings["usecolors"] == nil then
 			TankAssignments_Settings["usecolors"] = false
 		end
@@ -1141,7 +1143,7 @@ end
 function TankAssignments:Slash(arg1)
 	if arg1 == nil or arg1 == "" then
 		TankAssignments:Show()
-	elseif arg1 == "usecolors" then
+	elseif arg1 == "colors" then
 		if not TankAssignments_Settings["usecolors"] then
 			TankAssignments_Settings["usecolors"] = true
 			DEFAULT_CHAT_FRAME:AddMessage("|cffC79C6E TankAssignments 2.0|r: Using chat colors (note that some servers do not support this option)")
