@@ -94,10 +94,14 @@ TankAssignments:RegisterEvent("RAID_ROSTER_UPDATE")
 TankAssignments:RegisterEvent("CHAT_MSG_WHISPER")
 TankAssignments:RegisterEvent("UNIT_PORTRAIT_UPDATE")
 TankAssignments:RegisterEvent("CHAT_MSG_ADDON") 
+TankAssignments:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
 
 function TankAssignments:OnEvent()
 	if event == "ADDON_LOADED" and arg1 == "TankAssignments" then
-		DEFAULT_CHAT_FRAME:AddMessage("TankAssignments 2.0 Loaded!")
+		DEFAULT_CHAT_FRAME:AddMessage("|cffC79C6E TankAssignments 2.0|r: TankAssignments 2.0 Loaded!")
+		if TankAssignments_Settings["usecolors"] == nil then
+			TankAssignments_Settings["usecolors"] = false
+		end
 		TankAssignments:ConfigMainFrame()
 		TankAssignments:UnregisterEvent("ADDON_LOADED")
 	elseif event == "RAID_ROSTER_UPDATE" then 
@@ -129,6 +133,22 @@ function TankAssignments:OnEvent()
 
 			end
 		end
+		elseif (event == "UPDATE_MOUSEOVER_UNIT") then
+			if UnitExists("mouseover") then
+				if GetRaidTargetIndex("mouseover") then
+					for i=1,8 do
+						if GetRaidTargetIndex("mouseover") == i and getn(TankAssignments.Marks[i]) > 0 then
+							local names = ""
+							for k,v in pairs(TankAssignments.Marks[i]) do
+								names = names.." "..v
+							end
+							GameTooltip:AddDoubleLine("TankAssignments",names, 0.78, 0.61, 0.43, 1, 1, 1)
+							
+							--GameTooltip:AddTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcons")
+						end
+					end
+				end
+			end
 	end	
 end
 
@@ -1060,37 +1080,75 @@ function TankAssignments:PostAssignments()
 	local chanText = TankAssignments.TankChannelEditBox:GetText()
 	local chan,chanNum = TankAssignments:GetSendChannel(chanText)
 	local n=false
-	for i=1,8 do
-		if TankAssignments.Marks[i] ~= nil or getn( TankAssignments.Marks[i]) ~= 0 then
-			n=true
-		end
-	end
-	if n then
-		SendChatMessage("-- TankAssignments 2.0 --", chan, nil,chanNum)
-		local i = 8
-		while i > 0 do
-			local text = TankAssignments:GetClassColors(TankAssignments.RealMarks[i],"mark")
-			if getn(TankAssignments.Marks[i]) ~= 0 then
-				for k,v in pairs(TankAssignments.Marks[i]) do
-					if k == 1 then
-						text = text..": "..TankAssignments:GetClassColors(v,"cff")
-					else
-						text = text..", "..TankAssignments:GetClassColors(v,"cff")
-					end
-					if k == getn(TankAssignments.Marks[i]) then
-						text=text.."."
-					end
-				end
-				SendChatMessage(text, chan, nil,chanNum)
+	if TankAssignments_Settings["usecolors"] then
+		for i=1,8 do
+			if TankAssignments.Marks[i] ~= nil or getn( TankAssignments.Marks[i]) ~= 0 then
+				n=true
 			end
-			i=i-1
 		end
+		if n then
+			SendChatMessage("-- TankAssignments 2.0 --", chan, nil,chanNum)
+			local i = 8
+			while i > 0 do
+				local text = TankAssignments:GetClassColors(TankAssignments.RealMarks[i],"mark")
+				if getn(TankAssignments.Marks[i]) ~= 0 then
+					for k,v in pairs(TankAssignments.Marks[i]) do
+						if k == 1 then
+							text = text..": "..TankAssignments:GetClassColors(v,"cff")
+						else
+							text = text..", "..TankAssignments:GetClassColors(v,"cff")
+						end
+						if k == getn(TankAssignments.Marks[i]) then
+							text=text.."."
+						end
+					end
+					SendChatMessage(text, chan, nil,chanNum)
+				end
+				i=i-1
+			end
+		end
+	else
+		for i=1,8 do
+			if TankAssignments.Marks[i] ~= nil or getn( TankAssignments.Marks[i]) ~= 0 then
+				n=true
+			end
+		end
+		if n then
+			SendChatMessage("-- TankAssignments 2.0 --", chan, nil,chanNum)
+			local i = 8
+			while i > 0 do
+				local text = TankAssignments.RealMarks[i]
+				if getn(TankAssignments.Marks[i]) ~= 0 then
+					for k,v in pairs(TankAssignments.Marks[i]) do
+						if k == 1 then
+							text = text..": "..v
+						else
+							text = text..", "..v
+						end
+						if k == getn(TankAssignments.Marks[i]) then
+							text=text.."."
+						end
+					end
+					SendChatMessage(text, chan, nil,chanNum)
+				end
+				i=i-1
+			end
+		end
+	
 	end
 end
 
 function TankAssignments:Slash(arg1)
 	if arg1 == nil or arg1 == "" then
 		TankAssignments:Show()
+	elseif arg1 == "usecolors" then
+		if not TankAssignments_Settings["usecolors"] then
+			TankAssignments_Settings["usecolors"] = true
+			DEFAULT_CHAT_FRAME:AddMessage("|cffC79C6E TankAssignments 2.0|r: Using chat colors (note that some servers do not support this option)")
+		else
+			TankAssignments_Settings["usecolors"] = false
+			DEFAULT_CHAT_FRAME:AddMessage("|cffC79C6E TankAssignments 2.0|r: Chat colors turned off")		
+		end
 	else
 		DEFAULT_CHAT_FRAME:AddMessage("TankAssignments: There are no other commands")
 	end
